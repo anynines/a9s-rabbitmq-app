@@ -5,3 +5,5 @@ applications:
   path: .
   buildpack: https://github.com/cloudfoundry/go-buildpack
   command: go run main.go
+  env:
+    GOPACKAGENAME : rabbitmq-app
