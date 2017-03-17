@@ -68,3 +68,6 @@ At least run the sample app
 ```
 $ go run main.go
 ```
+
+## Remark
+To bind the app to other RabbitMQ services then `a9s-rabbitmq36` see the `VCAPServices` struct.

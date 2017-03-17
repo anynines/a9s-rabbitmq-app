@@ -14,7 +14,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-type VCAP_Services struct {
+// struct for reading env
+type VCAPServices struct {
 	RabbitMQ []struct {
 		Credentials struct {
 			Host     string `json:"host"`
@@ -26,19 +27,25 @@ type VCAP_Services struct {
 	} `json:"a9s-rabbitmq36"`
 }
 
+// store the URI to the rabbitmq
 var rabbitMQUri string
 
+// message struct to store in the Map
 type Message struct {
 	Message    string
 	ReceivedOn time.Time
 }
 
+// the map which stores the messages
 var messageStore = make(map[string]Message)
 
+// id counter
 var id int = 0
 
+// template store
 var templates map[string]*template.Template
 
+// fill template store and read env
 func init() {
 	if templates == nil {
 		templates = make(map[string]*template.Template)
@@ -46,8 +53,13 @@ func init() {
 	templates["index"] = template.Must(template.ParseFiles("templates/index.html", "templates/base.html"))
 	templates["new"] = template.Must(template.ParseFiles("templates/new.html", "templates/base.html"))
 
-	var s = new(VCAP_Services)
-	_ = json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &s)
+	// no new read of the env var, the reason is the receiver loop
+	var s = new(VCAPServices)
+	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &s)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	rabbitMQUri = (*s).RabbitMQ[0].Credentials.URI
 }
@@ -60,6 +72,7 @@ func renderTemplate(w http.ResponseWriter, name string, template string, viewMod
 	}
 }
 
+// the receiver for the RabbitMQ
 func startReceiver() error {
 	conn, err := amqp.Dial(rabbitMQUri)
 	if err != nil {
@@ -100,6 +113,7 @@ func startReceiver() error {
 	return nil
 }
 
+// send message to a RabbitMQ queue
 func sendMessage(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
