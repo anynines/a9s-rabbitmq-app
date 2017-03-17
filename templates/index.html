@@ -1,0 +1,25 @@
+{{define "head"}}<title>Index</title>{{end}}
+{{define "body"}}
+<h1>Message List</h1>
+<p>
+<a href="/messages/new" >Send Message</a> 
+</p>
+<div>
+<table border="1">
+<tr>
+	<th>Message</th>
+	<th>Received at</th>
+</tr>
+{{range $key,$value := . }}
+<tr>
+	<td>{{$value.Message}}</td>
+	<td>{{$value.ReceivedOn}}</td> 
+</tr>
+{{end}}
+</table>
+</div>
+{{end}}
+
+
+
+
