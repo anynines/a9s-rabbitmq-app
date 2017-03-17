@@ -8,28 +8,28 @@ An internal map stores the received messages and diyplays them on the main page.
 
 Download the application
 ```
-go get github.com/phartz/a9s-rabbitmq-app
-cd $GOPATH/src/github.com/phartz/a9s-rabbitmq-app
+$ go get github.com/phartz/a9s-rabbitmq-app
+$ cd $GOPATH/src/github.com/phartz/a9s-rabbitmq-app
 ```
 
 Create a service on the [a9s PAAS](https://paas.anynines.com)
 ```
-cf create-service a9s-rabbitmq36 rabbitmq-single-small myrabbitmq
+$ cf create-service a9s-rabbitmq36 rabbitmq-single-small myrabbitmq
 ```
 
 Push the app
 ```
-cf push --no-start
+$ cf push --no-start
 ```
 
 Bind the app
 ```
-cf bind-service rabbitmq-app myrabbitmq
+$ cf bind-service rabbitmq-app myrabbitmq
 ```
 
 And restage
 ```
-cf restage rabbitmq-app
+$ cf restage rabbitmq-app
 ```
 
 At least check the created url...
@@ -39,7 +39,7 @@ At least check the created url...
 
 To start it locally you have to export the env variable VCAP_SERVICES
 ```
-export VCAP_SERVICES='{
+$ export VCAP_SERVICES='{
   "a9s-rabbitmq36": [
    {
     "credentials": {
@@ -56,15 +56,15 @@ export VCAP_SERVICES='{
 
 You can install a RabbitMQ Server with homebrew:
 ```
-brew install rabbitmq
+$ brew install rabbitmq
 ```
 
 Now start a local RabbitMQ in Background
 ```
-/usr/local/sbin/rabbitmq-server > rabbit.log &
+$ /usr/local/sbin/rabbitmq-server > rabbit.log &
 ```
 
 At least run the sample app
 ```
-go run main.go
+$ go run main.go
 ```
