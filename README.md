@@ -8,8 +8,8 @@ An internal map stores the received messages and diyplays them on the main page.
 
 Download the application
 ```
-$ go get github.com/phartz/a9s-rabbitmq-app
-$ cd $GOPATH/src/github.com/phartz/a9s-rabbitmq-app
+$ go get github.com/anynines/a9s-rabbitmq-app
+$ cd $GOPATH/src/github.com/anynines/a9s-rabbitmq-app
 ```
 
 Create a service on the [a9s PAAS](https://paas.anynines.com)
