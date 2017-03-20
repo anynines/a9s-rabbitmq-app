@@ -1,25 +1,33 @@
-{{define "head"}}<title>Index</title>{{end}}
+{{define "title"}}<title>MyRabbitMQ Blog/ Index</title>{{end}}
 {{define "body"}}
-<h1>Message List</h1>
-<p>
-<a href="/messages/new" >Send Message</a> 
-</p>
-<div>
-<table border="1">
-<tr>
-	<th>Message</th>
-	<th>Received at</th>
-</tr>
-{{range $key,$value := . }}
-<tr>
-	<td>{{$value.Message}}</td>
-	<td>{{$value.ReceivedOn}}</td> 
-</tr>
+<div class="container content">
+	<div class="row">
+		<div class="col-lg-9">
+			<div class="page-header">
+				<h1>MyRabbitMQ Test</h1>
+				<div class="actions rAlign">
+					<a href="/messages/new" >Send Message</a>
+				</div> <!-- page-header -->
+			</div>
+			<div class="posts">
+					{{range $key,$value := . }}
+						<div class="post">
+							<div class="title">
+								<h4>Message {{$key}}</h4>
+							</div>
+							<div class="post-body">
+								{{$value.Message}}
+							</div>
+							<div class="post-footer">
+								<span class="timestamps">
+									Created at: {{$value.ReceivedAt}},
+								</span>
+							</div>
+		     		</div>
+					{{end}}
+				</table>
+			</div> <!-- post -->
+		</div> <!-- col-lg-9 -->
+	</div><!--/row-->
+</div> <!-- /container -->
 {{end}}
-</table>
-</div>
-{{end}}
-
-
-
-

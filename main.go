@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/streadway/amqp"
 )
 
@@ -30,10 +32,10 @@ type VCAPServices struct {
 // store the URI to the rabbitmq
 var rabbitMQUri string
 
-// message struct to store in the Map
+// Message struct to store in the Map
 type Message struct {
 	Message    string
-	ReceivedOn time.Time
+	ReceivedAt time.Time
 }
 
 // the map which stores the messages
@@ -160,19 +162,25 @@ func main() {
 		port = "9000"
 	}
 
-	r := mux.NewRouter().StrictSlash(false)
-	fs := http.FileServer(http.Dir("public"))
-	r.Handle("/public/", fs)
-	r.HandleFunc("/", getMessages)
-	r.HandleFunc("/messages/new", newMessage)
-	r.HandleFunc("/messages/send", sendMessage)
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println(path.Join(dir, "public"))
+	files, _ := ioutil.ReadDir(path.Join(dir, "public"))
+	for _, f := range files {
+		log.Println(f.Name())
+	}
+
+	fs := http.FileServer(http.Dir(path.Join(dir, "public")))
+	http.Handle("/public/", http.StripPrefix("/public/", fs))
+	http.HandleFunc("/", getMessages)
+	http.HandleFunc("/messages/new", newMessage)
+	http.HandleFunc("/messages/send", sendMessage)
 
 	go startReceiver()
 
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
-		Handler: r,
-	}
 	log.Println("Listening...")
-	server.ListenAndServe()
+	http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 }
