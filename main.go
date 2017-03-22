@@ -167,12 +167,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println(path.Join(dir, "public"))
-	files, _ := ioutil.ReadDir(path.Join(dir, "public"))
-	for _, f := range files {
-		log.Println(f.Name())
-	}
-
 	fs := http.FileServer(http.Dir(path.Join(dir, "public")))
 	http.Handle("/public/", http.StripPrefix("/public/", fs))
 	http.HandleFunc("/", getMessages)
@@ -181,6 +175,6 @@ func main() {
 
 	go startReceiver()
 
-	log.Println("Listening...")
+	log.Printf("Listening on port %v\n", port)
 	http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 }

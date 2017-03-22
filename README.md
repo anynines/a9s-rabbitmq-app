@@ -57,14 +57,15 @@ $ export VCAP_SERVICES='{
  }'
  ```
 
-You can install a RabbitMQ Server with homebrew:
-```
+RabbitMQ Server with homebrew:
+```shell
 $ brew install rabbitmq
+$ /usr/local/sbin/rabbitmq-server > rabbit.log &
 ```
 
-Now start a local RabbitMQ in Background
-```
-$ /usr/local/sbin/rabbitmq-server > rabbit.log &
+Docker:
+```shell
+$ docker run -d -p 5672:5672 rabbitmq
 ```
 
 Run the sample app
