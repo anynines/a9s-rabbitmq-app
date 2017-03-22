@@ -70,7 +70,8 @@ $ docker run -d -p 5672:5672 rabbitmq
 
 Run the sample app
 ```
-$ go run main.go
+$ go build
+$ ./a9s-rabbitmq-app
 ```
 
 ## Remark
