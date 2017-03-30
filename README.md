@@ -9,6 +9,8 @@ because of a small time lack caused by the network.
 
 ## Install, push and bind
 
+Make sure you installed GO on your machine, [download this](https://golang.org/doc/install?download=go1.8.darwin-amd64.pkg) for mac.
+
 Download the application
 ```
 $ go get github.com/anynines/a9s-rabbitmq-app
@@ -30,9 +32,9 @@ Bind the app
 $ cf bind-service rabbitmq-app myrabbitmq
 ```
 
-And restage
+And start
 ```
-$ cf restage rabbitmq-app
+$ cf start rabbitmq-app
 ```
 
 At lsst check the created url...
