@@ -25,7 +25,7 @@ type VCAPServices struct {
 			URI      string `json:"uri"`
 			Username string `json:"username"`
 		} `json:"credentials"`
-	} `json:"a9s-rabbitmq36"`
+	} `json:"a9s-rabbitmq"`
 }
 
 // store the URI to the rabbitmq
