@@ -10,22 +10,21 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
 )
 
 // struct for reading env
-type VCAPServices struct {
-	RabbitMQ []struct {
-		Credentials struct {
-			Host     string `json:"host"`
-			Password string `json:"password"`
-			Port     int    `json:"port"`
-			URI      string `json:"uri"`
-			Username string `json:"username"`
-		} `json:"credentials"`
-	} `json:"a9s-rabbitmq"`
+type RabbitMQ []struct {
+	Credentials struct {
+		Host     string `json:"host"`
+		Password string `json:"password"`
+		Port     int    `json:"port"`
+		URI      string `json:"uri"`
+		Username string `json:"username"`
+	} `json:"credentials"`
 }
 
 // store the URI to the rabbitmq
@@ -54,15 +53,25 @@ func init() {
 	templates["index"] = template.Must(template.ParseFiles("templates/index.html", "templates/base.html"))
 	templates["new"] = template.Must(template.ParseFiles("templates/new.html", "templates/base.html"))
 
-	// no new read of the env var, the reason is the receiver loop
-	var s = new(VCAPServices)
-	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &s)
-	if err != nil {
+	var rawServices map[string]json.RawMessage
+	servicesVar := os.Getenv("VCAP_SERVICES")
+	if err := json.Unmarshal([]byte(servicesVar), &rawServices); err != nil {
 		log.Println(err)
 		return
 	}
 
-	rabbitMQUri = (*s).RabbitMQ[0].Credentials.URI
+	var r RabbitMQ
+	for k, v := range rawServices {
+		if strings.Contains(k, "a9s-rabbitmq") {
+			err := json.Unmarshal(v, &r)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+	}
+
+	rabbitMQUri = r[0].Credentials.URI
 }
 
 func renderTemplate(w http.ResponseWriter, name string, template string, viewModel interface{}) {
