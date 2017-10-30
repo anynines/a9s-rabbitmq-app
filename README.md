@@ -1,15 +1,15 @@
 # a9s RabbitMQ App
 
-This is a sample app to check whether a RabbitMQ is working or not.
+This is a sample app to check whether a RabbitMQ server is working or not.
 The application is a simple web server that is able to send messages to a
 RabbitMQ queue and receive them. An internal map stores the received messages
-and displays them on the main page. When you send a message it is possible you
-have to reload the main page until the message was received from the queue
+and displays them on the main page. When you send a message you might have
+to reload the main page until the message was received from the queue
 because of a small time lack caused by the network.
 
 ## Install, push and bind
 
-Make sure you installed GO on your machine, [download this](https://golang.org/doc/install?download=go1.8.darwin-amd64.pkg) for mac.
+Make sure you installed Go on your machine, [download this](https://golang.org/doc/install?download=go1.8.darwin-amd64.pkg) for mac.
 
 Download the application
 ```
@@ -37,7 +37,7 @@ And start
 $ cf start rabbitmq-app
 ```
 
-At lsst check the created url...
+At last check the created url...
 
 
 ## Local test
