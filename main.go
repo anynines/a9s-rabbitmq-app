@@ -156,8 +156,8 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	port := "9000"
-	if port = os.Getenv("PORT"); len(port) == 0 {
+	port := os.Getenv("PORT")
+	if port == "" {
 		port = "9000"
 	}
 
