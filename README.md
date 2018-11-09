@@ -21,6 +21,10 @@ Create a service on the [a9s PaaS](https://paas.anynines.com)
 ```
 $ cf create-service a9s-rabbitmq36 rabbitmq-single-small myrabbitmq
 ```
+Build the app locally
+```
+$  GOOS=linux GOARCH=amd64 CGO_ENABLED=0 make
+```
 
 Push the app
 ```
@@ -47,6 +51,7 @@ To start it locally you have to export the env variable VCAP_SERVICES
 $ export VCAP_SERVICES='{
   "a9s-rabbitmq36": [
    {
+    "tags": [ "rabbitmq" ],
     "credentials": {
      "host": "localhost",
      "password": "quest",
@@ -76,6 +81,9 @@ $ go build
 $ ./a9s-rabbitmq-app
 ```
 
-## Remark
+## Configuration
 
-To bind the app to other RabbitMQ services than `a9s-rabbitmq36`, have a look at the `VCAPServices` struct.
+The app will bind to the first service instance that contains the `rabbitmq`
+tag, or you can set the `SERVICE_INSTANCE_NAME` variable to specify the service
+instance you would like to use.
+
