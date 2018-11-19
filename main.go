@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -11,24 +14,36 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/streadway/amqp"
 )
 
 // struct for reading env
-type RabbitMQ []struct {
-	Credentials struct {
-		Host     string `json:"host"`
-		Password string `json:"password"`
-		Port     int    `json:"port"`
-		URI      string `json:"uri"`
-		Username string `json:"username"`
-	} `json:"credentials"`
+type ServiceInstance struct {
+	Name        string      `json:"name"`
+	Tags        []string    `json:"tags"`
+	Credentials Credentials `json:"credentials"`
 }
 
-// store the URI to the rabbitmq
-var rabbitMQUri string
+type Credentials struct {
+	Host     string `json:"host"`
+	Password string `json:"password"`
+	Port     int    `json:"port"`
+	URI      string `json:"uri"`
+	Username string `json:"username"`
+	Cacrt    string `json:"cacrt,omitempty"`
+}
+
+type AppServer struct {
+	mqConn *amqp.Connection
+	// the map which stores the messages
+	messageStore sync.Map
+	// template store
+	templates        map[string]*template.Template
+	publicDirHandler http.Handler
+}
 
 // Message struct to store in the Map
 type Message struct {
@@ -36,61 +51,129 @@ type Message struct {
 	ReceivedAt time.Time
 }
 
-// the map which stores the messages
-var messageStore = make(map[string]Message)
+func NewAppServer() *AppServer {
 
-// id counter
-var id int = 0
-
-// template store
-var templates map[string]*template.Template
-
-// fill template store and read env
-func init() {
-	if templates == nil {
-		templates = make(map[string]*template.Template)
+	serviceInstance := getServiceInstance()
+	conn, err := serviceInstance.Credentials.amqpDial()
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	return &AppServer{
+		mqConn:           conn,
+		templates:        loadTemplates(),
+		publicDirHandler: publicDirHandler(),
+	}
+}
+
+func (a *AppServer) Close() {
+	a.mqConn.Close()
+}
+
+func publicDirHandler() http.Handler {
+
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return http.StripPrefix("/public/", http.FileServer(http.Dir(path.Join(dir, "public"))))
+}
+
+func loadTemplates() map[string]*template.Template {
+	templates := make(map[string]*template.Template, 0)
 	templates["index"] = template.Must(template.ParseFiles("templates/index.html", "templates/base.html"))
 	templates["new"] = template.Must(template.ParseFiles("templates/new.html", "templates/base.html"))
+	return templates
+}
 
-	var rawServices map[string]json.RawMessage
-	servicesVar := os.Getenv("VCAP_SERVICES")
-	if err := json.Unmarshal([]byte(servicesVar), &rawServices); err != nil {
-		log.Println(err)
-		return
+func getServiceInstance() ServiceInstance {
+	vcapServices := os.Getenv("VCAP_SERVICES")
+	if len(vcapServices) == 0 {
+		log.Fatalln("VCAP_SERVICES env variable must not be empty")
 	}
 
-	var r RabbitMQ
-	for k, v := range rawServices {
-		if strings.Contains(k, "a9s-rabbitmq") {
-			err := json.Unmarshal(v, &r)
-			if err != nil {
-				fmt.Println(err)
+	var services map[string][]ServiceInstance
+
+	if err := json.Unmarshal([]byte(vcapServices), &services); err != nil {
+		log.Fatal(err)
+	}
+
+	var serviceInstance *ServiceInstance
+	instanceName := os.Getenv("SERVICE_INSTANCE_NAME")
+	if len(instanceName) == 0 {
+		eachServiceInstance(services, func(si ServiceInstance) bool {
+			if contains(si.Tags, "rabbitmq") {
+				serviceInstance = &si
+				return true
+			}
+			return false
+		})
+	} else {
+		eachServiceInstance(services, func(si ServiceInstance) bool {
+			if si.Name == instanceName {
+				serviceInstance = &si
+				return true
+			}
+			return false
+		})
+	}
+
+	if serviceInstance == nil {
+		log.Fatalln("no valid service instance was found; specify SERVICE_INSTANCE_NAME or ensure \"rabbitmq\" tag is present")
+	}
+
+	return *serviceInstance
+}
+
+func contains(a []string, s string) bool {
+	for _, v := range a {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func eachServiceInstance(s map[string][]ServiceInstance, f func(si ServiceInstance) bool) {
+	for _, serviceInstances := range s {
+		for _, serviceInstance := range serviceInstances {
+			if f(serviceInstance) {
 				return
 			}
 		}
 	}
-
-	rabbitMQUri = r[0].Credentials.URI
 }
 
-func renderTemplate(w http.ResponseWriter, name string, template string, viewModel interface{}) {
-	tmpl, _ := templates[name]
+func (a *AppServer) renderTemplate(w http.ResponseWriter, name string, template string, viewModel interface{}) {
+	tmpl, _ := a.templates[name]
 	err := tmpl.ExecuteTemplate(w, template, viewModel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-// the receiver for the RabbitMQ
-func startReceiver() error {
-	conn, err := amqp.Dial(rabbitMQUri)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+func (c *Credentials) amqpDial() (*amqp.Connection, error) {
+	var conn *amqp.Connection
+	var err error
+	if len(c.Cacrt) == 0 {
+		conn, err = amqp.Dial(c.URI)
+	} else {
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM([]byte(c.Cacrt)) {
+			return nil, errors.New("CA certificate could not be parsed")
+		}
 
-	ch, err := conn.Channel()
+		conn, err = amqp.DialTLS(c.URI, &tls.Config{RootCAs: certPool})
+	}
+
+	return conn, err
+}
+
+// the receiver for the RabbitMQ
+func (a *AppServer) startReceiver() error {
+
+	ch, err := a.mqConn.Channel()
 	if err != nil {
 		return err
 	}
@@ -106,35 +189,23 @@ func startReceiver() error {
 		return err
 	}
 
-	forever := make(chan bool)
+	var id int
+	for d := range msgs {
+		message := Message{string(d.Body), time.Now()}
 
-	go func() {
-		for d := range msgs {
-			message := Message{string(d.Body), time.Now()}
-
-			id++
-			k := strconv.Itoa(id)
-			messageStore[k] = message
-		}
-	}()
-
-	<-forever
+		id++
+		k := strconv.Itoa(id)
+		a.messageStore.Store(k, message)
+	}
 
 	return nil
 }
 
 // send message to a RabbitMQ queue
-func sendMessage(w http.ResponseWriter, r *http.Request) {
+func (a *AppServer) sendMessage(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	conn, err := amqp.Dial(rabbitMQUri)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close()
-
-	ch, err := conn.Channel()
+	ch, err := a.mqConn.Channel()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -156,12 +227,33 @@ func sendMessage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", 302)
 }
 
-func newMessage(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "new", "base", nil)
+func (a *AppServer) newMessage(w http.ResponseWriter, r *http.Request) {
+	a.renderTemplate(w, "new", "base", nil)
 }
 
-func getMessages(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "index", "base", messageStore)
+func (a *AppServer) getMessages(w http.ResponseWriter, r *http.Request) {
+	storeView := make(map[string]Message, 0)
+	a.messageStore.Range(func(key, value interface{}) bool {
+		storeView[key.(string)] = value.(Message)
+		return true
+	})
+
+	a.renderTemplate(w, "index", "base", storeView)
+}
+
+func (a *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.URL.Path == "/":
+		a.getMessages(w, r)
+	case r.URL.Path == "/messages/new":
+		a.newMessage(w, r)
+	case r.URL.Path == "/messages/send":
+		a.sendMessage(w, r)
+	case strings.HasPrefix(r.URL.Path, "/public/"):
+		a.publicDirHandler.ServeHTTP(w, r)
+	default:
+		http.NotFound(w, r)
+	}
 }
 
 func main() {
@@ -170,18 +262,11 @@ func main() {
 		port = "9000"
 	}
 
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Fatal(err)
-	}
+	appServer := NewAppServer()
+	defer appServer.Close()
+	http.Handle("/", appServer)
 
-	fs := http.FileServer(http.Dir(path.Join(dir, "public")))
-	http.Handle("/public/", http.StripPrefix("/public/", fs))
-	http.HandleFunc("/", getMessages)
-	http.HandleFunc("/messages/new", newMessage)
-	http.HandleFunc("/messages/send", sendMessage)
-
-	go startReceiver()
+	go appServer.startReceiver()
 
 	log.Printf("Listening on port %v\n", port)
 	http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
