@@ -21,6 +21,7 @@ Create a service on the [a9s PaaS](https://paas.anynines.com)
 ```
 $ cf create-service a9s-rabbitmq36 rabbitmq-single-small myrabbitmq
 ```
+
 Build the app locally
 ```
 $  GOOS=linux GOARCH=amd64 CGO_ENABLED=0 make
@@ -35,6 +36,21 @@ Bind the app
 ```
 $ cf bind-service rabbitmq-app myrabbitmq
 ```
+
+**Known Issues**
+It is possible the application is not starting and you find the following in your app logs.
+ &nbsp;
+```bash
+$cf logs rabbitmq-app --recent
+Retrieving logs for app rabbitmq-app in org training / space phartz as phartz@anynines.com...
+
+   2019-02-19T09:04:23.02+0100 [API/1] OUT Created app with guid 09c5d595-d5f3-41b5-9175-1e2d7fc114b0
+   ...
+   2019-02-19T09:15:43.48+0100 [APP/PROC/WEB/0] ERR 2019/02/19 08:15:43 no valid service instance was found; specify SERVICE_INSTANCE_NAME or ensure "rabbitmq" tag is present
+   2019-02-19T09:15:43.48+0100 [APP/PROC/WEB/0] OUT Exit status 1
+```
+See the [configuration section](#configuration) of this document.
+&nbsp;
 
 And start
 ```
@@ -86,4 +102,18 @@ $ ./a9s-rabbitmq-app
 The app will bind to the first service instance that contains the `rabbitmq`
 tag, or you can set the `SERVICE_INSTANCE_NAME` variable to specify the service
 instance you would like to use.
+See the example below how to do that in the `manifest.yml`.
 
+```yaml
+applications:
+- name: rabbitmq-app
+  memory: 128M
+  random-route: true
+  instances: 1
+  path: .
+  buildpack: binary_buildpack
+  command: ./rabbitmq-app
+  env:
+    GOPACKAGENAME: rabbitmq-app
+    SERVICE_INSTANCE_NAME: myrabbitmq
+```
