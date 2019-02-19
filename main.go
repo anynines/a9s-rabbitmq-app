@@ -22,9 +22,10 @@ import (
 
 // struct for reading env
 type ServiceInstance struct {
-	Name        string      `json:"name"`
-	Tags        []string    `json:"tags"`
-	Credentials Credentials `json:"credentials"`
+	Name         string      `json:"name"`
+	InstanceName string      `json:"instance_name"`
+	Tags         []string    `json:"tags"`
+	Credentials  Credentials `json:"credentials"`
 }
 
 type Credentials struct {
@@ -111,7 +112,7 @@ func getServiceInstance() ServiceInstance {
 		})
 	} else {
 		eachServiceInstance(services, func(si ServiceInstance) bool {
-			if si.Name == instanceName {
+			if si.InstanceName == instanceName {
 				serviceInstance = &si
 				return true
 			}
