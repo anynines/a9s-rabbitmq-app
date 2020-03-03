@@ -1,6 +1,6 @@
 # a9s RabbitMQ App
 
-This is a sample app to check whether a RabbitMQ server is working or not.
+This is a sample application to check whether a RabbitMQ server is working or not.
 The application is a simple web server that is able to send messages to a
 RabbitMQ queue and receive them. An internal map stores the received messages
 and displays them on the main page. When you send a message you might have
