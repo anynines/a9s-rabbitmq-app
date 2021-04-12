@@ -7,7 +7,7 @@ and displays them on the main page. When you send a message you might have
 to reload the main page until the message was received from the queue
 because of a small time lack caused by the network.
 
-## Install, push and bind
+## Install, Push and Bind
 
 Make sure you installed Go on your machine, [download this](https://golang.org/doc/install?download=go1.8.darwin-amd64.pkg) for mac.
 
