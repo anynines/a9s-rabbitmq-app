@@ -38,7 +38,7 @@ $ cf bind-service rabbitmq-app myrabbitmq
 ```
 
 **Known Issues**
-It is possible the application is not starting and you find the following in your app logs.
+It is possible that the application is not starting and you find the following in your app logs.
  &nbsp;
 ```bash
 $cf logs rabbitmq-app --recent
